@@ -1,0 +1,190 @@
+<html>
+
+<head>
+    <title id="page-title">SVG to PNG Converter</title>
+</head>
+
+
+<body style="background-color: #fff; width: auto;">
+    <style>
+        .image {
+            stroke-width: 1px;
+            border: 1px solid #ccc;
+            max-width: 90%;
+            margin-top: 1em;
+            overflow: auto;
+            display: inline-block;
+        }
+        .footer {
+            font-size: x-small;
+            bottom: 10px;
+            position: fixed;
+        }
+    </style>
+    <div>
+        <!-- 引用 -->
+        <div class="footer">
+            <a href="http://mybyways.com/blog/convert-svg-to-png-using-your-browser">Ref: myByways SVG to PNG
+                Converter</a>
+        </div>
+
+        <!-- 输入框 -->
+        <div id="input-prompt">Enter SVG Code:</div>
+        <div>
+            <textarea id="raw-code" rows="8" style="width: 100%;"></textarea>
+        </div>
+
+        <!-- 设置大小 -->
+        <div id="adjust-prompt" style="margin-top: 1em;">Adjust size:</div>
+        <div>
+            <label id="w-set-propmt" for="png_width">Width: </label>
+            <input id="w-set" type="number" step="10" style="width: 4em;">
+            <label id="h-set-propmt" for="png_height">Height: </label>
+            <input id="h-set" type="number" step="10" style="width: 4em;">
+        </div>
+
+        <!-- 预览框 -->
+        <div style="margin-top: 1em;">
+            <div id="preview-prompt">SVG Preview:</div>
+            <div id="svg-preview" class="image"></div>
+        </div>
+
+        <!-- 输出框 -->
+        <div style="margin-top: 1em;">
+            <div id="output-prompt">PNG output:</div>
+            <div>
+                <canvas id="png-output" class="image" width="0" height="0"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 试试多语言
+        // 获取用户的首选语言
+        var userLanguage = navigator.language || navigator.userLanguage;
+        // 定义中英文对照
+        var translations = {
+            'page-title': {
+                'en': 'SVG to PNG Converter',
+                'zh': 'SVG / PNG 转换器'
+            },
+            'input-prompt': {
+                'en': 'Enter SVG Code:',
+                'zh': '输入SVG代码：'
+            },
+            'adjust-prompt': {
+                'en': 'Adjust size:',
+                'zh': '自定义大小：'
+            },
+            'w-set-propmt': {
+                'en': 'Width:',
+                'zh': '宽度:'
+            },
+            'h-set-propmt': {
+                'en': 'Height:',
+                'zh': '高度:'
+            },
+            'preview-prompt': {
+                'en': 'SVG Preview:',
+                'zh': 'SVG预览：'
+            },
+            'output-prompt': {
+                'en': 'PNG output (Right-click to save):',
+                'zh': 'PNG输出（右键保存）：'
+            },
+        };
+        // 根据用户的首选语言来设置页面上的文本
+        for (var id in translations) {
+            var element = document.getElementById(id);
+            if (element) {
+                if (userLanguage.startsWith('zh')) {
+                    element.textContent = translations[id]['zh'];
+                } else {
+                    element.textContent = translations[id]['en'];
+                }
+            }
+        }
+
+        // 全局变量
+        var raw_code = document.getElementById('raw-code');
+        var svg = null;
+        var width = document.getElementById('w-set');
+        var height = document.getElementById('h-set');
+        var canvas = document.getElementById('png-output');
+
+        function genPNG_initial() {
+            // 解析输入的SVG代码
+            var div = document.getElementById('svg-preview');
+            div.innerHTML = raw_code.value;
+            // 检查是否是合法的SVG代码
+            if (div.querySelector('svg') == null) {
+                div.innerHTML = '<p style="color: red;">Invalid SVG code!</p>';
+                return;
+            }
+            svg = div.querySelector('svg');
+            // 将SVG的宽高初始化到输入框中
+            width.value = svg.getBoundingClientRect().width;
+            height.value = svg.getBoundingClientRect().height;
+            genPNG();
+        }
+
+        function genPNG() {
+            // 将宽高设置从输入框同步下来
+            svg.setAttribute('width', width.value);
+            svg.setAttribute('height', height.value);
+            canvas.width = width.value;
+            canvas.height = height.value;
+
+            // 将SVG代码转换为PNG
+            var data = new XMLSerializer().serializeToString(svg);
+            var win = window.URL || window.webkitURL || window;
+            var img = new Image();
+            var blob = new Blob([data], { type: 'image/svg+xml' });
+            var url = win.createObjectURL(blob);
+            img.onload = function () {
+                canvas.getContext('2d').drawImage(img, 0, 0);
+                win.revokeObjectURL(url);
+                var uri = canvas.toDataURL('image/png').replace('image/png', 'octet/stream');
+                var a = document.createElement('a');
+                document.body.appendChild(a);
+                a.style = 'display: none';
+                a.href = uri
+                a.download = (svg.id || svg.svg.getAttribute('name') || svg.getAttribute('aria-label') || 'untitled') + '.png';
+                a.click();
+                window.URL.revokeObjectURL(uri);
+                document.body.removeChild(a);
+                img.onload = null;
+                img.src = '';
+            };
+            img.src = url;
+        }
+
+        // 输入框默认内容
+        var defaultContent = `<!-- example -->
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width=128 height=128>
+<path
+d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z">
+</path>
+</svg>`;
+
+        // 将默认内容放入输入框
+        raw_code.value = defaultContent;
+        
+        // 在初始输入上运行一次
+        genPNG_initial();
+
+        // 添加各种事件监听器
+        raw_code.addEventListener('focus', function() {
+            // 如果内容是默认内容，就清除它
+            if (this.value.trim() === defaultContent.trim()) {
+                this.value = '';
+            }
+        });
+        document.getElementById('raw-code').addEventListener('input', genPNG_initial);
+        document.getElementById('w-set').addEventListener('input', genPNG);
+        document.getElementById('h-set').addEventListener('input', genPNG);
+
+    </script>
+</body>
+
+</html>
